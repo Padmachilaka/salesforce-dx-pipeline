@@ -1,23 +1,47 @@
-<<<<<<< HEAD
-# salesforce-dx-pipeline
-Salesforce DX project with CI/CD pipeline for automating feature deployment across Dev, UAT, and Production.
-=======
-# Salesforce DX Project: Next Steps
+Salesforce DX Project Setup 
+##  Objective
+This project provides a hands-on guide to working with Salesforce Developer Experience (SFDX), including CLI installation, scratch org creation, metadata retrieval, and basic development using Apex and Lightning Web Components
+## Prerequisites
+- [Node.js](https://nodejs.org)
+- [Salesforce CLI](https://developer.salesforce.com/tools/sfdxcli)
+- Git & GitHub account
+- Visual Studio Code with Salesforce Extensions Pack
+- A Dev Hub-enabled Salesforce Org
+#Step-by-Step Setup Instructions
+## Step 1: Install Salesforce CLI
+ Download the installer:  
+https://developer.salesforce.com/tools/sfdxcli
+Verify installation:
+sf --version
+## Step 2: Authenticate Dev Hub Org
+sf auth:web:login -d -a DevHub
+ ## Step 3: Create Salesforce DX Project
+sf force:project:create -n my-sfdx-project cd my-sfdx-project
+## Step 4: Create a Scratch Org
+sf force:org:create -s -f config/project-scratch-def.json -a ScratchOrg
+Open the org:
+sf force:org:open
+## Step 5: Pull Metadata from Sandbox 
+Authenticate sandbox org:
+sf auth:web:login -a SandboxOrg
+Pull metadata (source-tracked):
+sf force:source:pull
+Non-source-tracked (use manifest or component names):
+sf force:source:retrieve -m ApexClass,LightningComponentBundle
+## Step 6: Make Code Changes
+Modify or add components in:
+Apex Classes → force-app/main/default/classes/
+Lightning Web Components → force-app/main/default/lwc/
+## Step 7: Push Changes to Scratch Org
+sf force:source:push
+Run tests:
+sf force:apex:test:run --resultformat human --outputdir test-results --wait 10
+ ## Step 8: Deploy to Sandbox 
+sfdx force:source:deploy -u SandboxOrg -p force-app
+ Deliverables
+Salesforce DX project structure
+Scratch org with changes deployed
+Apex Class or LWC modifications
+All changes pushed to GitHub
+This README.md file as documentation
 
-Now that you’ve created a Salesforce DX project, what’s next? Here are some documentation resources to get you started.
-
-## How Do You Plan to Deploy Your Changes?
-
-Do you want to deploy a set of changes, or create a self-contained application? Choose a [development model](https://developer.salesforce.com/tools/vscode/en/user-guide/development-models).
-
-## Configure Your Salesforce DX Project
-
-The `sfdx-project.json` file contains useful configuration information for your project. See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm) in the _Salesforce DX Developer Guide_ for details about this file.
-
-## Read All About It
-
-- [Salesforce Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
-- [Salesforce CLI Setup Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_intro.htm)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
->>>>>>> d966c3c (Initial DX project setup)
