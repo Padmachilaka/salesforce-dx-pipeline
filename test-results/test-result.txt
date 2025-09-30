@@ -1,0 +1,29 @@
+=== Test Results
+TEST NAME                             OUTCOME  MESSAGE  RUNTIME (MS)
+────────────────────────────────────  ───────  ───────  ────────────
+HelloWorldServiceTest.testGetMessage  Pass              30          
+
+
+=== Apex Code Coverage by Class
+CLASSES            PERCENT  UNCOVERED LINES
+─────────────────  ───────  ───────────────
+HelloWorldService  100%                    
+
+
+
+
+=== Test Summary
+NAME                 VALUE                        
+───────────────────  ─────────────────────────────
+Outcome              Passed                       
+Tests Ran            1                            
+Pass Rate            100%                         
+Fail Rate            0%                           
+Skip Rate            0%                           
+Test Run Id          707HF00000KHbJ3              
+Test Setup Time      0 ms                         
+Test Execution Time  30 ms                        
+Test Total Time      30 ms                        
+Org Id               00DHF000001xKF32AM           
+Username             test-djzxunutjsub@example.com
+Org Wide Coverage    100%                         
