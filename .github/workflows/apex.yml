@@ -1,0 +1,43 @@
+
+name: Salesforce Apex Tests
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  apex-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate to DevSandbox
+        run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
+
+      - name: Deploy Apex Classes Only
+        run: |
+          sf project deploy start --source-dir force-app/main/default/classes --target-org DevSandbox --test-level RunLocalTests
+
+      - name: Run Apex Tests with Coverage
+        run: sf apex run test --target-org DevSandbox --result-format human --code-coverage --wait 10
+
+      - name: Send Email on Apex Test Failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Apex Test Failure"
+          to: padduja712@gmail.com
+          from: ci-cd@yourcompany.com
+          body: |
+            🚨 Apex Test failed on branch ${{ github.ref }}.
+            Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
