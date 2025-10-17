@@ -1,4 +1,4 @@
-name: Salesforce Static Code Analysis
+name: Salesforce Static Code Analysis (PMD)
 
 on:
   push:
@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -28,12 +28,15 @@ jobs:
 
       - name: Install PMD
         run: |
-          wget https://github.com/pmd/pmd/releases/download/pmd_releases/7.18.0-SNAPSHOT/pmd-bin-7.18.0-SNAPSHOT.zip
-          unzip pmd-bin-7.18.0-SNAPSHOT.zip
+          echo "Downloading PMD..."
+          wget https://github.com/pmd/pmd/releases/download/pmd_releases/7.16.0/pmd-dist-7.16.0-bin.zip
+          unzip pmd-dist-7.16.0-bin.zip
+          mv pmd-bin-7.16.0 pmd
 
-      - name: Run PMD
+      - name: Run PMD Static Code Analysis
         run: |
-          ./pmd-bin-7.18.0-SNAPSHOT/bin/run.sh pmd \
+          echo "Running PMD Analysis..."
+          ./pmd/bin/pmd check \
             -d force-app/main/default/classes,force-app/main/default/triggers \
             -R rulesets/apex/quickstart.xml \
             -f text \
@@ -41,15 +44,18 @@ jobs:
 
       - name: Enforce Quality Gate
         run: |
+          echo "Checking for violations..."
           violations=$(grep -c "^[^ ]" pmd-report.txt || true)
-          echo "PMD violations found: $violations"
+          echo "Total Violations Found: $violations"
           if [ "$violations" -gt 5 ]; then
-            echo "Build failed due to quality gate (>$violations violations)."
+            echo "❌ Quality gate failed. Too many PMD violations."
             exit 1
+          else
+            echo "✅ Code quality gate passed."
           fi
 
       - name: Upload PMD Report
         uses: actions/upload-artifact@v4
         with:
-          name: pmd-report
+          name: PMD-Report
           path: pmd-report.txt
