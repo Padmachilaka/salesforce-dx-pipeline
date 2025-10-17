@@ -1,6 +1,5 @@
 name: Salesforce Static Code Analysis
 
-# Trigger on push or pull request to dev, uat, or main
 on:
   push:
     branches:
@@ -18,24 +17,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Setup Java (PMD requires Java)
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: '17'
 
-      # Step 3: Download and setup PMD
       - name: Install PMD
         run: |
           wget https://github.com/pmd/pmd/releases/download/pmd_releases/6.57.0/pmd-bin-6.57.0.zip
           unzip pmd-bin-6.57.0.zip
 
-      # Step 4: Run PMD on Apex classes and triggers
       - name: Run PMD
         run: |
           ./pmd-bin-6.57.0/bin/run.sh pmd \
@@ -44,7 +39,6 @@ jobs:
             -f text \
             -r pmd-report.txt
 
-      # Step 5: Check violations and enforce quality gate (max 5)
       - name: Enforce Quality Gate
         run: |
           violations=$(grep -c "^[^ ]" pmd-report.txt || true)
@@ -54,9 +48,8 @@ jobs:
             exit 1
           fi
 
-      # Step 6: Upload PMD report as artifact
       - name: Upload PMD Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pmd-report
           path: pmd-report.txt
