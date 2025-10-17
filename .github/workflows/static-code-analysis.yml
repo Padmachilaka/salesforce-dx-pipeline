@@ -39,7 +39,7 @@ jobs:
             -R rulesets/apex/quickstart.xml \
             -f text \
             -r pmd-report.txt \
-            --failOnViolation=false
+            --no-fail-on-violation
 
       - name: Enforce Quality Gate
         run: |
