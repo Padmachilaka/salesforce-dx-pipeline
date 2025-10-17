@@ -17,49 +17,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout source code
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Step 2: Setup Java for PMD
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: '17'
 
-      # Step 3: Download and extract PMD 7.16.0
       - name: Install PMD
         run: |
-          echo "🔽 Downloading PMD..."
           wget https://github.com/pmd/pmd/releases/download/pmd_releases/7.16.0/pmd-dist-7.16.0-bin.zip
           unzip pmd-dist-7.16.0-bin.zip
           mv pmd-bin-7.16.0 pmd
 
-      # Step 4: Run PMD scan on Apex classes
       - name: Run PMD Static Code Analysis
         run: |
-          echo "🚀 Running PMD Analysis..."
           ./pmd/bin/pmd check \
             -d force-app/main/default/classes \
             -R rulesets/apex/quickstart.xml \
             -f text \
-            -r pmd-report.txt
+            -r pmd-report.txt \
+            --failOnViolation=false
 
-      # Step 5: Enforce Quality Gate (max 5 violations)
       - name: Enforce Quality Gate
         run: |
-          echo "🧩 Checking for violations..."
           violations=$(grep -c "^[^ ]" pmd-report.txt || true)
           echo "Total Violations Found: $violations"
           if [ "$violations" -gt 5 ]; then
             echo "❌ Quality gate failed. Too many PMD violations."
             exit 1
           else
-            echo "✅ Code quality gate passed successfully."
+            echo "✅ Code quality gate passed."
           fi
 
-      # Step 6: Upload PMD Report as build artifact
       - name: Upload PMD Report
         uses: actions/upload-artifact@v4
         with:
