@@ -28,12 +28,12 @@ jobs:
 
       - name: Install PMD
         run: |
-          wget https://github.com/pmd/pmd/releases/download/pmd_releases/6.57.0/pmd-bin-6.57.0.zip
-          unzip pmd-bin-6.57.0.zip
+          wget https://github.com/pmd/pmd/releases/download/pmd_releases/6.56.0/pmd-bin-6.56.0.zip
+          unzip pmd-bin-6.56.0.zip
 
       - name: Run PMD
         run: |
-          ./pmd-bin-6.57.0/bin/run.sh pmd \
+          ./pmd-bin-6.56.0/bin/run.sh pmd \
             -d force-app/main/default/classes,force-app/main/default/triggers \
             -R rulesets/apex/quickstart.xml \
             -f text \
