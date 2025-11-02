@@ -1,38 +1,41 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Deploy to UAT"]     # 👈 Trigger only after UAT deployment completes
+    types:
+      - completed
 
 jobs:
   deploy-prod:
+    # 👇 Run only if the Deploy to UAT workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Install Salesforce CLI
-      run: npm install --global @salesforce/cli
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
 
-    - name: Authenticate to Production Org
-      run: echo "${{ secrets.PROD_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias ProdOrg --sfdx-url-stdin
+      - name: Authenticate to Production Org
+        run: echo "${{ secrets.PROD_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias ProdOrg --sfdx-url-stdin
 
-    - name: Deploy Metadata to Production
-      run: sf project deploy start --source-dir force-app/main/default --target-org ProdOrg --wait 10
+      - name: Deploy Metadata to Production
+        run: sf project deploy start --source-dir force-app/main/default --target-org ProdOrg --wait 10
 
-    - name: Send Email on Deploy to Production Failure
-      if: failure()
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "Deploy to Production Failure"
-        to: padduja712@gmail.com
-        from: ci-cd@yourcompany.com
-        body: |
-          🚨 Deployment to Production failed on branch ${{ github.ref }}.
-          Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Send Email on Deploy to Production Failure
+        if: failure()
+        uses: Padmachilaka/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Deploy to Production Failure"
+          to: padduja712@gmail.com
+          from: ci-cd@yourcompany.com
+          body: |
+            🚨 Deployment to Production failed on branch ${{ github.ref }}.
+            Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
