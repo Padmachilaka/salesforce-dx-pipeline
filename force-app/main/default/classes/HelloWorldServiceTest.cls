@@ -1,14 +1,8 @@
-@IsTest
-public class HelloWorldServiceTest {
-
-    @IsTest
-    static void testGetMessage() {
-        // Test formal greeting
-        String formalMessage = HelloWorldService.getMessage(true);
-        System.assertEquals('Hello, World!', formalMessage);
-        
-        // Test informal greeting
-        String informalMessage = HelloWorldService.getMessage(false);
-        System.assertEquals('Hi World!', informalMessage);
+@isTest
+private class HelloWorldServiceTest {
+    @isTest static void testGetMessage() {
+        String expected = 'Hello, World! make a chage';
+        String actual = HelloWorldService.getMessage();
+        System.assertEquals(expected, actual, 'Test failed: Message did not match expected value');
     }
 }

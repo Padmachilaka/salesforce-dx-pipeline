@@ -14,7 +14,8 @@ jobs:
 
     steps:
     - name: Send Failure Email Notification
-      uses: dawidd6/action-send-mail@v3
+      uses: Padmachilaka/action-send-mail@v3
+
       with:
         server_address: smtp.gmail.com
         server_port: 587
