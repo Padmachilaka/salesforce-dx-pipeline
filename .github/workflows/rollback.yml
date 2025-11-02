@@ -25,6 +25,7 @@ jobs:
     - name: Send Email on Rollback Failure
       if: failure()
       uses: Padmachilaka/action-send-mail@v3
+
       with:
         server_address: smtp.gmail.com
         server_port: 587
