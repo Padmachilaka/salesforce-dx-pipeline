@@ -1,38 +1,41 @@
 name: Deploy to Dev
 
 on:
-  push:
-    branches:
-      - dev
+  workflow_run:
+    workflows: ["Salesforce Apex Tests"]   # depends on your Apex test workflow name
+    types:
+      - completed
 
 jobs:
   deploy-dev:
+    # Only run if the Apex Tests workflow passed successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Install Salesforce CLI
-      run: npm install --global @salesforce/cli
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
 
-    - name: Authenticate to DevSandbox
-      run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
+      - name: Authenticate to DevSandbox
+        run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
-    - name: Deploy Metadata to Dev
-      run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --wait 10
+      - name: Deploy Metadata to Dev
+        run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --wait 10
 
-    - name: Send Email on Deploy to Dev Failure
-      if: failure()
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "Deploy to Dev Failure"
-        to: padduja712@gmail.com
-        from: ci-cd@yourcompany.com
-        body: |
-          🚨 Deployment to Dev failed on branch ${{ github.ref }}.
-          Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Send Email on Deploy to Dev Failure
+        if: failure()
+        uses: Padmachilaka/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Deploy to Dev Failure"
+          to: padduja712@gmail.com
+          from: ci-cd@yourcompany.com
+          body: |
+            🚨 Deployment to Dev failed on branch ${{ github.ref }}.
+            Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
