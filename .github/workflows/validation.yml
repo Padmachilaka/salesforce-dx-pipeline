@@ -1,52 +1,63 @@
 name: Salesforce Validation
 
 on:
-  pull_request:
-    branches: [dev, uat, main]
+  workflow_run:
+    workflows: ["Salesforce Apex Tests"]
+    types:
+      - completed
 
 jobs:
   validation:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      # Step 1 - Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Install Salesforce CLI
-      run: npm install --global @salesforce/cli
+      # Step 2 - Install Salesforce CLI
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
 
-    - name: Authenticate to DevHub
-      run: echo "${{ secrets.DEVHUB_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevHub --set-default-dev-hub --sfdx-url-stdin
+      # Step 3 - Authenticate to DevHub
+      - name: Authenticate to DevHub
+        run: echo "${{ secrets.DEVHUB_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevHub --set-default-dev-hub --sfdx-url-stdin
 
-    - name: Create Scratch Org
-      run: sf org create scratch --definition-file config/project-scratch-def.json --alias CI --set-default --duration-days 1 --target-dev-hub DevHub
+      # Step 4 - Create Scratch Org
+      - name: Create Scratch Org
+        run: sf org create scratch --definition-file config/project-scratch-def.json --alias CI --set-default --duration-days 1 --target-dev-hub DevHub
 
-    - name: Push Source to Scratch Org
-      run: sf project deploy start --source-dir force-app --target-org CI
+      # Step 5 - Push Source to Scratch Org
+      - name: Push Source to Scratch Org
+        run: sf project deploy start --source-dir force-app --target-org CI
 
-    - name: Run Apex Tests
-      run: sf apex run test --target-org CI --result-format human --code-coverage --wait 10
+      # Step 6 - Run Apex Tests
+      - name: Run Apex Tests
+        run: sf apex run test --target-org CI --result-format human --code-coverage --wait 10
 
-    - name: Validate Deployment (Dry-Run CheckOnly)
-      run: sf project deploy start --source-dir force-app --target-org CI --dry-run --test-level RunLocalTests
+      # Step 7 - Validate Deployment (Dry Run)
+      - name: Validate Deployment (Dry Run)
+        run: sf project deploy start --source-dir force-app --target-org CI --dry-run --test-level RunLocalTests
 
-    - name: Delete Scratch Org
-      run: sf org delete scratch --target-org CI --no-prompt || true
+      # Step 8 - Delete Scratch Org
+      - name: Delete Scratch Org
+        run: sf org delete scratch --target-org CI --no-prompt || true
 
-    - name: Send Email on Validation Failure
-      if: failure()
-      uses: Padmachilaka/action-send-mail@v3
-
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "Validation Failure"
-        to: padduja712@gmail.com
-        from: ci-cd@yourcompany.com
-        body: |
-          🚨 Validation failed on branch ${{ github.ref }}.
-          Workflow: ${{ github.workflow }}
-          Run: ${{ github.run_number }}.
-          Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      # Step 9 - Send Email on Validation Failure
+      - name: Send Email on Validation Failure
+        if: failure()
+        uses: Padmachilaka/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Validation Failure"
+          to: padduja712@gmail.com
+          from: ci-cd@yourcompany.com
+          body: |
+            Validation failed on branch ${{ github.ref }}.
+            Workflow: Salesforce Validation
+            Run Number: ${{ github.run_number }}
+            Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

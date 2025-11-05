@@ -1,16 +1,18 @@
 name: Salesforce Apex Tests
 
 on:
-  push:
-    branches:
-      - dev
+  workflow_run:
+    workflows: ["Salesforce PMD Static Code Analysis"]
+    types:
+      - completed
 
 jobs:
   apex-tests:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1 - Checkout the repository code
+      # Step 1 - Checkout Repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
@@ -18,11 +20,11 @@ jobs:
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
 
-      # Step 3 - Authenticate to your Dev Sandbox
-      - name: Authenticate to DevSandbox
+      # Step 3 - Authenticate to Dev Sandbox
+      - name: Authenticate to Dev Sandbox
         run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
-      # Step 4 - Detect which files were changed
+      # Step 4 - Detect Changed Files
       - name: Detect Changed Files
         id: detect
         run: |
@@ -35,10 +37,10 @@ jobs:
 
           # Check for Apex-related files (.cls, .trigger, .test)
           if echo "$CHANGED_FILES" | grep -E '\.cls$|\.trigger$|\.tgr$|\.test$'; then
-            echo "✅ Apex components found — will run tests."
+            echo "Apex components found — will run tests."
             echo "run_tests=true" >> $GITHUB_ENV
           else
-            echo "ℹ️ No Apex components found — skipping tests."
+            echo "No Apex components found — skipping tests."
             echo "run_tests=false" >> $GITHUB_ENV
           fi
 
@@ -58,20 +60,19 @@ jobs:
         if: env.run_tests == 'true'
         run: sf apex run test --target-org DevSandbox --result-format human --code-coverage --wait 10
 
-      # Step 7 - Send email alert on failure
+      # Step 7 - Send Email on Apex Test Failure
       - name: Send Email on Apex Test Failure
         if: failure()
         uses: Padmachilaka/action-send-mail@v3
-
         with:
           server_address: smtp.gmail.com
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "🚨 Apex Test Failure in Dev Environment"
+          subject: "Apex Test Failure in Dev Environment"
           to: padduja712@gmail.com
           from: ci-cd@yourcompany.com
           body: |
-            ⚠️ Apex Test failed on branch ${{ github.ref }}.
+            Apex Test failed for branch ${{ github.ref }}.
             Workflow: Salesforce Apex Tests
             Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
