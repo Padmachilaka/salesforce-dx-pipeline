@@ -1,15 +1,15 @@
 name: Deploy to UAT
 
 on:
-  workflow_run:
-    workflows: ["Deploy to Dev"]     # 👈 Run only after Dev deployment
-    types:
-      - completed
+  pull_request:
+    types: [closed]     # triggers when PR is closed (merged or closed manually)
+    branches:
+      - uat             # only for PRs targeting the 'uat' branch
 
 jobs:
   deploy-uat:
-    # 👇 Run only if the Deploy to Dev workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Run only when PR was merged successfully (not just closed)
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
@@ -28,7 +28,6 @@ jobs:
       - name: Send Email on Deploy to UAT Failure
         if: failure()
         uses: Padmachilaka/action-send-mail@v3
-
         with:
           server_address: smtp.gmail.com
           server_port: 587
@@ -38,5 +37,5 @@ jobs:
           to: padduja712@gmail.com
           from: ci-cd@yourcompany.com
           body: |
-            🚨 Deployment to UAT failed on branch ${{ github.ref }}.
+            Deployment to UAT failed after merging PR from dev to uat.
             Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
