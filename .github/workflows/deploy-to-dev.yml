@@ -2,19 +2,23 @@ name: Deploy to Dev
 
 on:
   workflow_run:
-    workflows: ["Salesforce Validation"]   # depends on your Validation workflow
+    workflows: ["Salesforce Validation"]   # Runs after Validation workflow completes
     types:
       - completed
 
+  push:
+    branches:
+      - dev
+
 jobs:
   deploy-dev:
-    # Only run if the Validation workflow passed successfully
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Run only if the Validation workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
 
     steps:
       # Step 1 - Checkout Code
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       # Step 2 - Install Salesforce CLI
@@ -26,11 +30,15 @@ jobs:
         run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
       # Step 4 - Deploy Metadata to Dev
-      - name: Deploy Metadata to Dev
-        run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --wait 10
+      - name: Deploy Metadata to Dev Sandbox
+        run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --test-level RunLocalTests --wait 10
 
-      # Step 5 - Send Email on Deployment Failure
-      - name: Send Email on Deployment Failure
+      # Step 5 - Run Apex Tests (optional double check)
+      - name: Run Apex Tests in Dev Sandbox
+        run: sf apex run test --target-org DevSandbox --result-format human --code-coverage --wait 10
+
+      # Step 6 - Send Email on Deployment Failure
+      - name: Send Email on Dev Deployment Failure
         if: failure()
         uses: Padmachilaka/action-send-mail@v3
         with:
@@ -38,10 +46,11 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Deploy to Dev Failure"
+          subject: "Deployment Failed - Dev Environment"
           to: padduja712@gmail.com
           from: ci-cd@yourcompany.com
           body: |
-            Deployment to Dev failed on branch ${{ github.ref }}.
+            Deployment to Dev environment failed.
+            Branch: ${{ github.ref_name }}
             Workflow: Deploy to Dev
             Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
