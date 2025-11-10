@@ -6,25 +6,33 @@ on:
     types:
       - completed
 
+  push:
+    branches:
+      - dev
+      - uat
+      - main
+
+  pull_request:
+    branches:
+      - dev
+      - uat
+      - main  
+
 jobs:
   apex-tests:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1 - Checkout Repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2 - Install Salesforce CLI
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
 
-      # Step 3 - Authenticate to Dev Sandbox
       - name: Authenticate to Dev Sandbox
         run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
-      # Step 4 - Detect Changed Files
       - name: Detect Changed Files
         id: detect
         run: |
@@ -35,7 +43,6 @@ jobs:
           CHANGED_FILES=$(git diff --name-only HEAD^ HEAD || true)
           echo "$CHANGED_FILES"
 
-          # Check for Apex-related files (.cls, .trigger, .test)
           if echo "$CHANGED_FILES" | grep -E '\.cls$|\.trigger$|\.tgr$|\.test$'; then
             echo "Apex components found — will run tests."
             echo "run_tests=true" >> $GITHUB_ENV
@@ -44,7 +51,6 @@ jobs:
             echo "run_tests=false" >> $GITHUB_ENV
           fi
 
-      # Step 5 - Deploy Metadata with Conditional Test Level
       - name: Deploy Metadata
         run: |
           if [ "$run_tests" = "true" ]; then
@@ -55,12 +61,10 @@ jobs:
             sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --test-level NoTestRun --wait 10
           fi
 
-      # Step 6 - Run Apex Tests (only if Apex code changed)
       - name: Run Apex Tests with Coverage
         if: env.run_tests == 'true'
         run: sf apex run test --target-org DevSandbox --result-format human --code-coverage --wait 10
 
-      # Step 7 - Send Email on Apex Test Failure
       - name: Send Email on Apex Test Failure
         if: failure()
         uses: Padmachilaka/action-send-mail@v3

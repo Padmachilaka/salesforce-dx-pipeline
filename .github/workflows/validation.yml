@@ -6,45 +6,48 @@ on:
     types:
       - completed
 
+  push:
+    branches:
+      - dev
+      - uat
+      - main
+
+  pull_request:
+    branches:
+      - dev
+      - uat
+      - main
+
 jobs:
   validation:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1 - Checkout Code
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2 - Install Salesforce CLI
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
 
-      # Step 3 - Authenticate to DevHub
       - name: Authenticate to DevHub
         run: echo "${{ secrets.DEVHUB_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevHub --set-default-dev-hub --sfdx-url-stdin
 
-      # Step 4 - Create Scratch Org
       - name: Create Scratch Org
         run: sf org create scratch --definition-file config/project-scratch-def.json --alias CI --set-default --duration-days 1 --target-dev-hub DevHub
 
-      # Step 5 - Push Source to Scratch Org
       - name: Push Source to Scratch Org
         run: sf project deploy start --source-dir force-app --target-org CI
 
-      # Step 6 - Run Apex Tests
       - name: Run Apex Tests
         run: sf apex run test --target-org CI --result-format human --code-coverage --wait 10
 
-      # Step 7 - Validate Deployment (Dry Run)
-      - name: Validate Deployment (Dry Run)
+      - name: Validate Deployment (CheckOnly)
         run: sf project deploy start --source-dir force-app --target-org CI --dry-run --test-level RunLocalTests
 
-      # Step 8 - Delete Scratch Org
       - name: Delete Scratch Org
         run: sf org delete scratch --target-org CI --no-prompt || true
 
-      # Step 9 - Send Email on Validation Failure
       - name: Send Email on Validation Failure
         if: failure()
         uses: Padmachilaka/action-send-mail@v3
@@ -59,5 +62,4 @@ jobs:
           body: |
             Validation failed on branch ${{ github.ref }}.
             Workflow: Salesforce Validation
-            Run Number: ${{ github.run_number }}
             Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
