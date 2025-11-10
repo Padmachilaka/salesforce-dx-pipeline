@@ -2,41 +2,47 @@ name: Deploy to Dev
 
 on:
   workflow_run:
-    workflows: ["Salesforce Apex Tests"]   # depends on your Apex test workflow name
+    workflows: ["Salesforce Validation"]
     types:
       - completed
+  push:
+    branches:
+      - dev
 
 jobs:
   deploy-dev:
-    # Only run if the Apex Tests workflow passed successfully
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
 
-      - name: Authenticate to DevSandbox
+      - name: Authenticate to Dev Sandbox
         run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
-      - name: Deploy Metadata to Dev
-        run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --wait 10
+      - name: Deploy Metadata to Dev Sandbox
+        run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --test-level RunLocalTests --wait 10
 
-      - name: Send Email on Deploy to Dev Failure
+      - name: Run Apex Tests in Dev Sandbox
+        run: sf apex run test --target-org DevSandbox --result-format human --code-coverage --wait 10
+
+      - name: Send Email on Dev Deployment Failure
         if: failure()
         uses: Padmachilaka/action-send-mail@v3
-
         with:
           server_address: smtp.gmail.com
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Deploy to Dev Failure"
+          subject: "Deployment Failed - Dev Environment"
           to: padduja712@gmail.com
           from: ci-cd@yourcompany.com
           body: |
-            🚨 Deployment to Dev failed on branch ${{ github.ref }}.
+            Deployment to Dev environment failed.
+            Branch: ${{ github.ref_name }}
+            Workflow: Deploy to Dev
             Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
