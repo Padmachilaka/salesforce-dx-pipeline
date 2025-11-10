@@ -1,13 +1,26 @@
-name: 3 - Salesforce Validation
+name: Salesforce Validation
 
 on:
   workflow_run:
-    workflows: ["2 - Salesforce Apex Test Run"]
-    types: [completed]
+    workflows: ["Salesforce Apex Tests"]
+    types:
+      - completed
+
+  push:
+    branches:
+      - dev
+      - uat
+      - main
+
+  pull_request:
+    branches:
+      - dev
+      - uat
+      - main
 
 jobs:
   validation:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -18,36 +31,35 @@ jobs:
         run: npm install --global @salesforce/cli
 
       - name: Authenticate to DevHub
-        run: echo "${{ secrets.DEVHUB_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevHub --sfdx-url-stdin
+        run: echo "${{ secrets.DEVHUB_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevHub --set-default-dev-hub --sfdx-url-stdin
+
+      - name: Create Scratch Org
+        run: sf org create scratch --definition-file config/project-scratch-def.json --alias CI --set-default --duration-days 1 --target-dev-hub DevHub
+
+      - name: Push Source to Scratch Org
+        run: sf project deploy start --source-dir force-app --target-org CI
+
+      - name: Run Apex Tests
+        run: sf apex run test --target-org CI --result-format human --code-coverage --wait 10
 
       - name: Validate Deployment (CheckOnly)
-        run: sf project deploy start --source-dir force-app --target-org DevHub --test-level RunLocalTests --dry-run --wait 10
+        run: sf project deploy start --source-dir force-app --target-org CI --dry-run --test-level RunLocalTests
+
+      - name: Delete Scratch Org
+        run: sf org delete scratch --target-org CI --no-prompt || true
 
       - name: Send Email on Validation Failure
         if: failure()
-        uses: dawidd6/action-send-mail@v3
+        uses: Padmachilaka/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Validation Failed - Dev Branch"
+          subject: "Validation Failure"
           to: padduja712@gmail.com
           from: ci-cd@yourcompany.com
           body: |
-            Validation failed for branch ${{ github.ref_name }}.
-            Please check deployment logs and fix issues.
-
-      - name: Send Email on Validation Success
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Validation Passed - Dev Branch"
-          to: padduja712@gmail.com
-          from: ci-cd@yourcompany.com
-          body: |
-            Validation completed successfully. Proceeding to deployment.
+            Validation failed on branch ${{ github.ref }}.
+            Workflow: Salesforce Validation
+            Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

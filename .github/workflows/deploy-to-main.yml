@@ -2,13 +2,12 @@ name: Deploy to Main
 
 on:
   pull_request:
-    types: [closed]     # triggers when PR is closed (merged)
+    types: [closed]
     branches:
-      - main            # only for PRs targeting 'main'
+      - main
 
 jobs:
   deploy-main:
-    # Run only when PR was merged successfully
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 

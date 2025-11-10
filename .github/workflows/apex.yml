@@ -1,72 +1,82 @@
-name: 2 - Salesforce Apex Test Run
+name: Salesforce Apex Tests
 
 on:
   workflow_run:
-    workflows: ["1 - Salesforce PMD Static Code Analysis"]
-    types: [completed]
+    workflows: ["Salesforce PMD Static Code Analysis"]
+    types:
+      - completed
+
+  push:
+    branches:
+      - dev
+      - uat
+      - main
+
+  pull_request:
+    branches:
+      - dev
+      - uat
+      - main  
 
 jobs:
   apex-tests:
-    # Run tests only if PMD (Static Analysis) succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1 - Checkout Repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2 - Install Salesforce CLI
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
 
-      # Step 3 - Authenticate to Dev Sandbox
       - name: Authenticate to Dev Sandbox
         run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
-      # Step 4 - Deploy Apex Classes and Run Tests
-      - name: Deploy and Run Apex Tests
+      - name: Detect Changed Files
+        id: detect
         run: |
-          sf project deploy start \
-            --source-dir force-app/main/default/classes \
-            --target-org DevSandbox \
-            --test-level RunLocalTests \
-            --wait 10
+          echo "Fetching latest changes..."
+          git fetch origin ${{ github.ref_name }}
 
-      # Step 5 - Run Apex Tests with Coverage
+          echo "Checking which files changed in the last commit..."
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD || true)
+          echo "$CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -E '\.cls$|\.trigger$|\.tgr$|\.test$'; then
+            echo "Apex components found — will run tests."
+            echo "run_tests=true" >> $GITHUB_ENV
+          else
+            echo "No Apex components found — skipping tests."
+            echo "run_tests=false" >> $GITHUB_ENV
+          fi
+
+      - name: Deploy Metadata
+        run: |
+          if [ "$run_tests" = "true" ]; then
+            echo "Running deployment with Apex tests (RunLocalTests)..."
+            sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --test-level RunLocalTests --wait 10
+          else
+            echo "Deploying without running tests (NoTestRun)..."
+            sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --test-level NoTestRun --wait 10
+          fi
+
       - name: Run Apex Tests with Coverage
+        if: env.run_tests == 'true'
         run: sf apex run test --target-org DevSandbox --result-format human --code-coverage --wait 10
 
-      # Step 6 - Send Email on Apex Test Failure
       - name: Send Email on Apex Test Failure
         if: failure()
-        uses: dawidd6/action-send-mail@v3
+        uses: Padmachilaka/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Apex Test Failure - Dev Environment"
+          subject: "Apex Test Failure in Dev Environment"
           to: padduja712@gmail.com
           from: ci-cd@yourcompany.com
           body: |
-            Apex Tests failed for branch ${{ github.ref_name }}.
-            Please review the logs and fix the issues.
-            Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-      # Step 7 - Send Email on Apex Test Success
-      - name: Send Email on Apex Test Success
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Apex Tests Passed - Dev Environment"
-          to: padduja712@gmail.com
-          from: ci-cd@yourcompany.com
-          body: |
-            Apex Tests passed successfully for branch ${{ github.ref_name }}.
-            Code is ready for validation and deployment.
+            Apex Test failed for branch ${{ github.ref }}.
+            Workflow: Salesforce Apex Tests
             Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

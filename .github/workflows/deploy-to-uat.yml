@@ -2,13 +2,12 @@ name: Deploy to UAT
 
 on:
   pull_request:
-    types: [closed]     # triggers when PR is closed (merged or closed manually)
+    types: [closed]
     branches:
-      - uat             # only for PRs targeting the 'uat' branch
+      - uat
 
 jobs:
   deploy-uat:
-    # Run only when PR was merged successfully (not just closed)
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 

@@ -2,42 +2,34 @@ name: Deploy to Dev
 
 on:
   workflow_run:
-    workflows: ["Salesforce Validation"]   # Runs after Validation workflow completes
+    workflows: ["Salesforce Validation"]
     types:
       - completed
-
   push:
     branches:
       - dev
 
 jobs:
   deploy-dev:
-    # Run only if the Validation workflow succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1 - Checkout Code
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # Step 2 - Install Salesforce CLI
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
 
-      # Step 3 - Authenticate to Dev Sandbox
       - name: Authenticate to Dev Sandbox
         run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
-      # Step 4 - Deploy Metadata to Dev
       - name: Deploy Metadata to Dev Sandbox
         run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --test-level RunLocalTests --wait 10
 
-      # Step 5 - Run Apex Tests (optional double check)
       - name: Run Apex Tests in Dev Sandbox
         run: sf apex run test --target-org DevSandbox --result-format human --code-coverage --wait 10
 
-      # Step 6 - Send Email on Deployment Failure
       - name: Send Email on Dev Deployment Failure
         if: failure()
         uses: Padmachilaka/action-send-mail@v3

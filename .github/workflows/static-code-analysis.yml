@@ -1,7 +1,12 @@
-name: 1 - Salesforce PMD Static Code Analysis
+name: Salesforce PMD Static Code Analysis
 
 on:
   push:
+    branches:
+      - dev
+      - uat
+      - main
+  pull_request:
     branches:
       - dev
       - uat
@@ -13,25 +18,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1 - Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Step 2 - Setup Java
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: '17'
 
-      # Step 3 - Install PMD
       - name: Install PMD
         run: |
           wget https://github.com/pmd/pmd/releases/download/pmd_releases/7.16.0/pmd-dist-7.16.0-bin.zip
           unzip pmd-dist-7.16.0-bin.zip
           mv pmd-bin-7.16.0 pmd
 
-      # Step 4 - Run PMD Analysis
       - name: Run PMD Analysis
         run: |
           ./pmd/bin/pmd check \
@@ -41,27 +42,25 @@ jobs:
             -r pmd-report.txt \
             --no-fail-on-violation
 
-      # Step 5 - Enforce Quality Gate
       - name: Enforce Quality Gate
         id: quality_gate
         run: |
           violations=$(grep -c "^[^ ]" pmd-report.txt || true)
+          echo "Total Violations Found: $violations"
           echo "violations=$violations" >> $GITHUB_ENV
           if [ "$violations" -gt 5 ]; then
-            echo "PMD Quality Gate Failed."
+            echo "PMD Quality Gate Failed. Too many violations."
             exit 1
           else
             echo "PMD Quality Gate Passed."
           fi
 
-      # Step 6 - Upload PMD Report
       - name: Upload PMD Report
         uses: actions/upload-artifact@v4
         with:
           name: PMD-Report
           path: pmd-report.txt
 
-      # Step 7 - Send Email on PMD Failure
       - name: Send Email on PMD Failure
         if: failure()
         uses: Padmachilaka/action-send-mail@v3
@@ -70,15 +69,14 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "PMD Static Code Analysis Failed - ${{ github.ref_name }}"
+          subject: "PMD Static Code Analysis Failed - ${{ github.ref }}"
           to: padduja712@gmail.com
           from: ci-cd@yourcompany.com
           body: |
-            PMD analysis failed for branch: ${{ github.ref_name }}.
-            Please fix the reported issues before proceeding.
+            PMD analysis failed for branch: ${{ github.ref }}.
+            Please fix the reported code issues before proceeding.
             Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      # Step 8 - Send Email on PMD Success
       - name: Send Email on PMD Success
         if: success()
         uses: Padmachilaka/action-send-mail@v3
@@ -87,9 +85,10 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "PMD Static Code Analysis Passed - ${{ github.ref_name }}"
+          subject: "PMD Static Code Analysis Passed - ${{ github.ref }}"
           to: padduja712@gmail.com
           from: ci-cd@yourcompany.com
           body: |
-            PMD analysis passed for branch: ${{ github.ref_name }}.
-            No major violations detected.
+            PMD analysis passed for branch: ${{ github.ref }}.
+            No major code violations detected.
+            Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
