@@ -1,0 +1,23 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate to DevSandbox
+        run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
+
+      - name: Perform Rollback
+        run: |
+          # Example rollback deployment (adjust as per your rollback strategy)
+          sf project deploy start --source-dir rollback-metadata --target-org DevSandbox --wait 10
