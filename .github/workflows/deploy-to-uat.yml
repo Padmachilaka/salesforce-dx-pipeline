@@ -123,7 +123,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "🚨 UAT Deployment Pipeline Failed"
+          subject: " UAT Deployment Pipeline Failed"
           to: padduja712@gmail.com
           from: ci-cd@yourcompany.com
           body: |

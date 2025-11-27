@@ -147,7 +147,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "🚨 Dev CI Pipeline Failed - ${{ github.ref_name }}"
+          subject: " Dev CI Pipeline Failed - ${{ github.ref_name }}"
           to: padduja712@gmail.com
           from: ci-cd@yourcompany.com
           body: |
