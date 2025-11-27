@@ -1,0 +1,132 @@
+name: Deploy to UAT
+
+on:
+  workflow_dispatch:
+
+jobs:
+  pmd-uat:
+    name: PMD Static Code Analysis (UAT)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install PMD
+        run: |
+          wget https://github.com/pmd/pmd/releases/download/pmd_releases/7.16.0/pmd-dist-7.16.0-bin.zip
+          unzip pmd-dist-7.16.0-bin.zip
+          mv pmd-bin-7.16.0 pmd
+
+      - name: Run PMD Analysis
+        run: |
+          ./pmd/bin/pmd check \
+            -d force-app/main/default/classes \
+            -R rulesets/apex/quickstart.xml \
+            -f text \
+            -r pmd-report.txt \
+            --no-fail-on-violation
+
+      - name: Enforce PMD Quality Gate
+        run: |
+          violations=$(grep -c "^[^ ]" pmd-report.txt || true)
+          echo "PMD Violations: $violations"
+          if [ "$violations" -gt 5 ]; then
+            echo "PMD Quality Gate Failed"
+            exit 1
+          fi
+
+  apex-tests-uat:
+    name: Salesforce Apex Tests (UAT)
+    runs-on: ubuntu-latest
+    needs: pmd-uat
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate to UAT Sandbox
+        run: echo "${{ secrets.UAT_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias UATSandbox --sfdx-url-stdin
+
+      - name: Run Apex Tests in UAT
+        run: sf apex run test --target-org UATSandbox --result-format human --code-coverage --wait 10
+
+  validation-uat:
+    name: Salesforce Validation (UAT)
+    runs-on: ubuntu-latest
+    needs: apex-tests-uat
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate to DevHub
+        run: echo "${{ secrets.DEVHUB_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevHub --set-default-dev-hub --sfdx-url-stdin
+
+      - name: Create Scratch Org for UAT Validation
+        run: sf org create scratch --definition-file config/project-scratch-def.json --alias UAT_VALIDATION --set-default --duration-days 1 --target-dev-hub DevHub
+
+      - name: Deploy to Scratch Org
+        run: sf project deploy start --source-dir force-app --target-org UAT_VALIDATION --test-level RunLocalTests --wait 10
+
+      - name: Validate Deployment (CheckOnly)
+        run: sf project deploy start --source-dir force-app --target-org UAT_VALIDATION --dry-run --test-level RunLocalTests
+
+      - name: Delete Scratch Org
+        run: sf org delete scratch --target-org UAT_VALIDATION --no-prompt || true
+
+  deploy-uat:
+    name: Deploy to UAT
+    runs-on: ubuntu-latest
+    needs: validation-uat
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate to UAT Sandbox
+        run: echo "${{ secrets.UAT_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias UATSandbox --sfdx-url-stdin
+
+      - name: Deploy Metadata to UAT
+        run: sf project deploy start --source-dir force-app/main/default --target-org UATSandbox --wait 10
+
+  notify-uat-failure:
+    name: Failure Notification (UAT)
+    runs-on: ubuntu-latest
+    needs:
+      - pmd-uat
+      - apex-tests-uat
+      - validation-uat
+      - deploy-uat
+    if: ${{ failure() }}
+
+    steps:
+      - name: Send Failure Email Notification
+        uses: Padmachilaka/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "🚨 UAT Deployment Pipeline Failed"
+          to: padduja712@gmail.com
+          from: ci-cd@yourcompany.com
+          body: |
+            The UAT deployment pipeline failed.
+            Please review the logs:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
