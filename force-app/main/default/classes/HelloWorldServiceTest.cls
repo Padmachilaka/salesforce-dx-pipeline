@@ -1,18 +1,17 @@
 @isTest
 private class HelloWorldServiceTest {
+
     @isTest
     static void testGetMessage() {
-        String expected = 
+
+        String expected =
             'Hello, World! make a change ' +
             'Welcome to the GitHub Actions commit-based deployment demo ' +
-            'GitHub Actions workflows worked sequentially';
+            'GitHub Actions workflows worked sequentially ' +
+            'Now we have updated and reframed the CI/CD workflows';
 
         String actual = HelloWorldService.getMessage();
 
-        System.assertEquals(
-            expected, 
-            actual, 
-            'Test failed: Message did not match expected value'
-        );
+        System.assertEquals(expected, actual, 'Message output did not match expected text');
     }
 }
