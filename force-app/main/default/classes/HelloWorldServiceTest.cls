@@ -1,19 +1,21 @@
-@isTest
-public class HelloWorldService_Test {
-    @isTest
-    public static void testGetMessage() {
+@IsTest
+private class HelloWorldServiceTest {
 
-        // Call the method
-        String result = HelloWorldService.getMessage();
+    @IsTest
+    static void testGetMessageAndAdditionalMessage_FullCoverage() {
+        Test.startTest();
+        String resultMain = HelloWorldService.getMessage();
+        String resultAdditional = HelloWorldService.getAdditionalMessage();
+        Test.stopTest();
 
-        // Validate the result contains all messages
-        System.assert(result.contains('Hello, World! make a change'));
-        System.assert(result.contains('Welcome to the GitHub Actions commit-based deployment demo'));
-        System.assert(result.contains('GitHub Actions workflows worked sequentially'));
-        System.assert(result.contains('Now we have updated and reframed the CI/CD workflows'));
-        System.assert(result.contains('This demo was really helpful'));
+        System.assertNotEquals(null, resultMain);
+        System.assert(resultMain.contains('Hello, World! make a change'));
+        System.assert(resultMain.contains('Welcome to the GitHub Actions commit-based deployment demo'));
+        System.assert(resultMain.contains('GitHub Actions workflows worked sequentially'));
+        System.assert(resultMain.contains('Now we have updated and reframed the CI/CD workflows'));
+        System.assert(resultMain.contains('Now checking the job executions for positive and negative scenarios where subsequent jobs run only if the preceding job succeeds.'));
 
-        // Ensure the string is not empty
-        System.assertNotEquals('', result);
+        System.assertNotEquals(null, resultAdditional);
+        System.assertEquals('This is an additional method for message retrieval.', resultAdditional);
     }
 }
