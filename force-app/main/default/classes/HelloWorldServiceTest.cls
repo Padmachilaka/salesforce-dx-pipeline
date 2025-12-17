@@ -1,14 +1,17 @@
-@IsTest
+@isTest
 private class HelloWorldServiceTest {
 
-    @IsTest
+    @isTest
     static void testGetMessage() {
-        Test.startTest();
-        String result = HelloWorldService.getMessage();
-        Test.stopTest();
 
-        System.assertNotEquals(null, result);
-        System.assert(result.contains('Hello, World! make a change'));
-        System.assert(result.contains('Now checking the job executions'));
+        String expected =
+            'Hello, World! make a change ' +
+            'Welcome to the GitHub Actions commit-based deployment demo ' +
+            'GitHub Actions workflows worked sequentially ' +
+            'Now we have updated and reframed the CI/CD workflows';
+
+        String actual = HelloWorldService.getMessage();
+
+        System.assertEquals(expected, actual, 'Message output did not match expected text');
     }
 }
