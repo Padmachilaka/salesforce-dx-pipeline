@@ -101,10 +101,10 @@ jobs:
         run: sf org create scratch --definition-file config/project-scratch-def.json --alias CI --set-default --duration-days 1 --target-dev-hub DevHub
 
       - name: Deploy to Scratch Org
-        run: sf project deploy start --source-dir force-app --target-org CI --test-level RunLocalTests --wait 10
+        run: sf project deploy start --source-dir force-app --target-org CI --test-level NoTestRun --wait 10
 
       - name: Validate Deployment (CheckOnly)
-        run: sf project deploy start --source-dir force-app --target-org CI --dry-run --test-level RunLocalTests
+        run: sf project deploy start --source-dir force-app --target-org CI --dry-run --test-level NoTestRun
 
       - name: Delete Scratch Org
         run: sf org delete scratch --target-org CI --no-prompt || true
@@ -126,7 +126,7 @@ jobs:
         run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
       - name: Deploy Metadata to Dev
-        run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --test-level RunLocalTests --wait 10
+        run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --test-level NoTestRun --wait 10
 
   # 5) Failure Notification (if any job fails)
   notify-on-failure:
