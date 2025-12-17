@@ -78,8 +78,8 @@ jobs:
       - name: Authenticate to Dev Sandbox
         run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
-      
-        
+      - name: Run Apex Tests
+        run: sf apex run test --target-org DevSandbox --result-format human --code-coverage --wait 10
 
   # 3) Validation (only if Apex tests passed)
   validation:
