@@ -4,24 +4,19 @@ public class AccountServiceTest {
     @IsTest
     static void testCreateAccount() {
 
-        // Start Test Context
         Test.startTest();
-
-        // Call method under test
         Account acc = AccountService.createAccount('Test Account');
-
         Test.stopTest();
 
-        // Verify Account was created
-        System.assertNotEquals(null, acc.Id, 'Account Id should be created');
+        System.assertNotEquals(null, acc.Id);
 
         Account accFromDb = [
-            SELECT Id, Name
+            SELECT Name, Checklist_Date__c
             FROM Account
             WHERE Id = :acc.Id
         ];
 
-        // Assertions
         System.assertEquals('Test Account', accFromDb.Name);
+        System.assertEquals(Date.today(), accFromDb.Checklist_Date__c);
     }
 }
