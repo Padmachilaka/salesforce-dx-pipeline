@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Update_Today_s_date</fullName>
-    <active>true</active>
-    <errorConditionFormula>ISNULL( Today_s_Date__c )</errorConditionFormula>
-    <errorMessage>Please update the Today&apos;s Date</errorMessage>
-</ValidationRule>
