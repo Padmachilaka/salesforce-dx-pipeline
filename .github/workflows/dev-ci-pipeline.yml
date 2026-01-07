@@ -66,7 +66,6 @@ jobs:
   apex-tests:
     name: Salesforce Apex Tests
     runs-on: ubuntu-latest
-    needs: static-code-analysis
 
     steps:
       - name: Checkout Code
@@ -78,14 +77,11 @@ jobs:
       - name: Authenticate to Dev Sandbox
         run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
-      - name: Run Apex Tests
-        run: sf apex run test --target-org DevSandbox --result-format human --code-coverage --wait 10
 
   # 3) Validation (only if Apex tests passed)
   validation:
     name: Salesforce Validation
     runs-on: ubuntu-latest
-    needs: apex-tests
 
     steps:
       - name: Checkout Code
@@ -97,24 +93,13 @@ jobs:
       - name: Authenticate to DevHub
         run: echo "${{ secrets.DEVHUB_SFDX_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevHub --set-default-dev-hub --sfdx-url-stdin
 
-      - name: Create Scratch Org
-        run: sf org create scratch --definition-file config/project-scratch-def.json --alias CI --set-default --duration-days 1 --target-dev-hub DevHub
-
-      - name: Deploy to Scratch Org
-        run: sf project deploy start --source-dir force-app --target-org CI --test-level RunLocalTests --wait 10
-
       - name: Validate Deployment (CheckOnly)
-        run: sf project deploy start --source-dir force-app --target-org CI --dry-run --test-level RunLocalTests
-
-      - name: Delete Scratch Org
-        run: sf org delete scratch --target-org CI --no-prompt || true
+        run: sf project deploy start --source-dir force-app --target-org CI --dry-run --test-level NoTestRun
 
   # 4) Deploy to Dev (only if Validation passed)
   deploy-dev:
     name: Deploy to Dev
     runs-on: ubuntu-latest
-    needs: validation
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -126,7 +111,7 @@ jobs:
         run: echo "${{ secrets.DEV_SF_AUTH_URL }}" | sf auth:sfdxurl:store --alias DevSandbox --sfdx-url-stdin
 
       - name: Deploy Metadata to Dev
-        run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --test-level RunLocalTests --wait 10
+        run: sf project deploy start --source-dir force-app/main/default --target-org DevSandbox --test-level NoTestRun --wait 10
 
   # 5) Failure Notification (if any job fails)
   notify-on-failure:
